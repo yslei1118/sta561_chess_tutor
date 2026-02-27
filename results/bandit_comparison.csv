@@ -1,0 +1,6 @@
+Policy,Mean Cum. Reward,Std,Mean ELO Gain,Arm Entropy
+Thompson Sampling,15.681,1.029,3.2,2.659
+ε-Greedy (ε=0.1),16.300,0.826,3.5,0.710
+LinUCB (α=1),16.977,1.011,3.0,2.448
+Random,13.962,0.754,3.2,2.806
+Rule-Based,15.837,0.592,3.0,1.177

@@ -1,0 +1,27 @@
+# Data files (too large for GitHub)
+data/raw/
+data/processed/
+data/test/
+data/test_processed/
+
+# Trained models (too large)
+models/saved/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+chess_tutor/demo/*_executed.ipynb
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
