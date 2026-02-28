@@ -149,17 +149,17 @@ jupyter notebook chess_tutor/demo/chess_tutor_demo.ipynb
 - **Architecture B**: Single pooled RF with normalized ELO appended as feature
 - **Architecture C**: Train per-bracket models, combine via Nadaraya-Watson kernel:
 
-$$P(m \mid x, s^*) = \frac{\sum_k K_h(s^* - s_k) \cdot P_k(m \mid x)}{\sum_k K_h(s^* - s_k)}$$
+`P(m | x, s*) = Σ_k K_h(s* - s_k) · P_k(m | x) / Σ_k K_h(s* - s_k)`
 
-where $K_h$ is a Gaussian kernel with bandwidth $h$ selected by leave-one-bracket-out CV.
+where `K_h` is a Gaussian kernel with bandwidth `h` selected by leave-one-bracket-out CV.
 
 ### Contextual Thompson Sampling
 
-For each feedback arm $a$, maintain Bayesian linear regression $r = \theta_a^\top x + \varepsilon$ with posterior $\mathcal{N}(\hat{\mu}_a, v^2 B_a^{-1})$.
+For each feedback arm `a`, maintain Bayesian linear regression `r = θ_a'x + ε` with posterior `N(μ̂_a, v² B_a⁻¹)`.
 
-**Select**: Sample $\tilde{\theta}_a \sim \mathcal{N}(\hat{\mu}_a, v^2 B_a^{-1})$, play $\arg\max_a \tilde{\theta}_a^\top x$
+**Select**: Sample `θ̃_a ~ N(μ̂_a, v² B_a⁻¹)`, play `argmax_a θ̃_a'x`
 
-**Update**: $B_a \leftarrow B_a + x x^\top$, $f_a \leftarrow f_a + r \cdot x$, $\hat{\mu}_a \leftarrow B_a^{-1} f_a$
+**Update**: `B_a ← B_a + x x'`, `f_a ← f_a + r · x`, `μ̂_a ← B_a⁻¹ f_a`
 
 ### Feedback Types
 
@@ -175,11 +175,11 @@ For each feedback arm $a$, maintain Bayesian linear regression $r = \theta_a^\to
 
 ## References
 
-- McIlroy-Young et al. (2020). *Aligning Superhuman AI with Human Behavior: Chess as a Model System* (Maia Chess)
-- Agrawal & Goyal (2013). *Thompson Sampling for Contextual Bandits with Linear Payoffs* (ICML)
-- De Kerpel et al. (2025). *Contextual Bandits in Educational Settings*
-- BP-Chess (2025). *Handcrafted features + simple ML for human move prediction*
+- McIlroy-Young et al. (2020). *Aligning Superhuman AI with Human Behavior: Chess as a Model System.* KDD 2020. (Maia-1 — Architecture A per-ELO models)
+- Skidanov et al. (2025). *BP-Chess: Handcrafted Features for Human Move Prediction.* arXiv:2504.05425. (Feature engineering approach)
+- Nadaraya (1964). *On Estimating Regression.* Theory of Probability and Its Applications. (Kernel interpolation — Architecture C)
+- Agrawal & Goyal (2013). *Thompson Sampling for Contextual Bandits with Linear Payoffs.* ICML 2013. (Teaching engine)
+- Li et al. (2010). *A Contextual-Bandit Approach to Personalized News Article Recommendation.* WWW 2010. (LinUCB baseline)
+- Clement et al. (2015). *Multi-Armed Bandits for Intelligent Tutoring Systems.* JEDM. (ZPD-based student simulator)
+- Jacob et al. (2022). *Modeling Strong and Human-Like Gameplay with KL-Regularized Search.* ICML 2022. (KL-regularized bot)
 
-## License
-
-This project was developed for the STA 561D course at Duke University.
