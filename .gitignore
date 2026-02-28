@@ -7,12 +7,19 @@ data/test_processed/
 # Trained models (too large)
 models/saved/
 
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
-*.egg-info/
+*.py[codz]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+eggs/
 .eggs/
+*.egg-info/
+*.egg
 
 # Jupyter
 .ipynb_checkpoints/
@@ -25,3 +32,18 @@ chess_tutor/demo/*_executed.ipynb
 # OS
 .DS_Store
 Thumbs.db
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy / ruff
+.mypy_cache/
+.ruff_cache/
