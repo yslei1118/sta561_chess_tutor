@@ -149,17 +149,19 @@ jupyter notebook chess_tutor/demo/chess_tutor_demo.ipynb
 - **Architecture B**: Single pooled RF with normalized ELO appended as feature
 - **Architecture C**: Train per-bracket models, combine via Nadaraya-Watson kernel:
 
-`P(m | x, s*) = Σ_k K_h(s* - s_k) · P_k(m | x) / Σ_k K_h(s* - s_k)`
+```math
+P(m \mid x, s^*) = \frac{\sum_k K_h(s^* - s_k) \cdot P_k(m \mid x)}{\sum_k K_h(s^* - s_k)}
+```
 
-where `K_h` is a Gaussian kernel with bandwidth `h` selected by leave-one-bracket-out CV.
+where $K_h$ is a Gaussian kernel with bandwidth $h$ selected by leave-one-bracket-out CV.
 
 ### Contextual Thompson Sampling
 
-For each feedback arm `a`, maintain Bayesian linear regression `r = θ_a'x + ε` with posterior `N(μ̂_a, v² B_a⁻¹)`.
+For each feedback arm $a$, maintain Bayesian linear regression $r = \theta_a^\top x + \varepsilon$ with posterior $\mathcal{N}(\hat{\mu}_a, v^2 B_a^{-1})$.
 
-**Select**: Sample `θ̃_a ~ N(μ̂_a, v² B_a⁻¹)`, play `argmax_a θ̃_a'x`
+**Select**: Sample $\tilde{\theta}_a \sim \mathcal{N}(\hat{\mu}_a, v^2 B_a^{-1})$, play $\arg\max_a \tilde{\theta}_a^\top x$
 
-**Update**: `B_a ← B_a + x x'`, `f_a ← f_a + r · x`, `μ̂_a ← B_a⁻¹ f_a`
+**Update**: $B_a \leftarrow B_a + x x^\top$, $f_a \leftarrow f_a + r \cdot x$, $\hat{\mu}_a \leftarrow B_a^{-1} f_a$
 
 ### Feedback Types
 
