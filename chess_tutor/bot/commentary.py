@@ -1,5 +1,6 @@
 """Move-by-move commentary generation for interactive play."""
 
+import random
 import chess
 from ..data.extract_features import extract_board_features, detect_game_phase
 
@@ -21,12 +22,11 @@ class CommentaryGenerator:
         san = board_before.san(student_move)
         is_capture = board_before.is_capture(student_move)
         gives_check = board_before.gives_check(student_move)
-
-        parts = [f"You played {san}"]
-
-        # Describe the move
         piece = board_before.piece_at(student_move.from_square)
         piece_name = chess.piece_name(piece.piece_type) if piece else "piece"
+        to_name = chess.square_name(student_move.to_square)
+
+        parts = [f"You played {san}"]
 
         if gives_check:
             parts.append("— a forcing check!")
@@ -36,25 +36,53 @@ class CommentaryGenerator:
                 parts.append(f"— capturing the {chess.piece_name(captured.piece_type)}.")
             else:
                 parts.append("— a capture.")
+        elif piece and piece.piece_type == chess.PAWN:
+            center = {chess.D4, chess.D5, chess.E4, chess.E5}
+            if student_move.to_square in center:
+                parts.append("— occupying the center with a pawn. Good idea!")
+            else:
+                parts.append(f"— advancing the pawn to {to_name}.")
+        elif piece and piece.piece_type == chess.KNIGHT:
+            center_area = {chess.C3, chess.C6, chess.F3, chess.F6, chess.D4, chess.D5, chess.E4, chess.E5}
+            if student_move.to_square in center_area:
+                parts.append(f"— a knight developing to a strong central square.")
+            else:
+                parts.append(f"— moving the knight to {to_name}.")
+        elif piece and piece.piece_type == chess.BISHOP:
+            parts.append(f"— developing the bishop to {to_name}.")
+        elif piece and piece.piece_type == chess.ROOK:
+            # Check if moving to open file
+            file = chess.square_file(student_move.to_square)
+            pawns_on_file = sum(1 for sq in chess.SQUARES if chess.square_file(sq) == file
+                               and board_before.piece_at(sq) and board_before.piece_at(sq).piece_type == chess.PAWN)
+            if pawns_on_file == 0:
+                parts.append(f"— placing the rook on the open {chr(ord('a')+file)}-file.")
+            else:
+                parts.append(f"— a rook move to {to_name}.")
+        elif piece and piece.piece_type == chess.KING:
+            if board_before.is_castling(student_move):
+                parts.append("— castling to safety. Smart!")
+            else:
+                parts.append(f"— a king move to {to_name}.")
         else:
-            parts.append(f"— a {piece_name} move.")
+            parts.append(f"— a {piece_name} move to {to_name}.")
 
         # Compare with engine if available
         if engine_eval and "best_move" in engine_eval and engine_eval["best_move"]:
             best_uci = engine_eval["best_move"]
             if student_move.uci() == best_uci:
-                parts.append("This is the engine's top choice — excellent!")
+                parts.append("This is the engine's top choice!")
             else:
                 try:
                     best_san = board_before.san(chess.Move.from_uci(best_uci))
                     if student_elo < 1400:
-                        parts.append(f"The engine slightly prefers {best_san}, but your move is reasonable for your level.")
+                        parts.append(f"The engine slightly prefers {best_san}, but your move is fine.")
                     else:
                         cp_loss = engine_eval.get("cp_loss", 0)
                         if cp_loss and cp_loss < 30:
-                            parts.append(f"Very close to the engine's {best_san}. Barely any difference.")
+                            parts.append(f"Very close to the engine's {best_san}.")
                         elif cp_loss and cp_loss < 100:
-                            parts.append(f"The engine prefers {best_san}. The difference is about {cp_loss:.0f} centipawns.")
+                            parts.append(f"The engine prefers {best_san} ({cp_loss:.0f}cp better).")
                         else:
                             parts.append(f"The engine strongly prefers {best_san} here.")
                 except Exception:
@@ -70,26 +98,58 @@ class CommentaryGenerator:
         san = board_before.san(bot_move)
         piece = board_before.piece_at(bot_move.from_square)
         piece_name = chess.piece_name(piece.piece_type) if piece else "piece"
+        to_name = chess.square_name(bot_move.to_square)
 
         parts = [f"I played {san}"]
 
         if board_before.is_capture(bot_move):
-            parts.append("because I saw a chance to win material.")
+            captured = board_before.piece_at(bot_move.to_square)
+            if captured:
+                parts.append(f"to take your {chess.piece_name(captured.piece_type)}.")
+            else:
+                parts.append("to win material.")
         elif board_before.gives_check(bot_move):
             parts.append("to put pressure on your king.")
-        else:
-            phase = detect_game_phase(board_before)
-            if phase == "opening":
-                parts.append("to develop my pieces and control the center.")
-            elif phase == "endgame":
-                parts.append("to improve my king position in the endgame.")
+        elif board_before.is_castling(bot_move):
+            parts.append("to castle and get my king to safety.")
+        elif piece and piece.piece_type == chess.PAWN:
+            center = {chess.D4, chess.D5, chess.E4, chess.E5}
+            if bot_move.to_square in center:
+                parts.append("to fight for central control.")
             else:
-                parts.append("to improve my position.")
-
-        if target_elo < 1300:
-            parts.append("At my level, I often play this kind of move in these positions.")
-        elif target_elo < 1700:
-            parts.append("This felt like the most natural move to me.")
+                reasons = ["to gain space.", "to support my pieces.", "to create a pawn chain."]
+                parts.append(random.choice(reasons))
+        elif piece and piece.piece_type == chess.KNIGHT:
+            reasons = [
+                f"to bring my knight to the active square {to_name}.",
+                f"to develop my knight towards the center.",
+                f"to reposition my knight to {to_name}.",
+            ]
+            parts.append(random.choice(reasons))
+        elif piece and piece.piece_type == chess.BISHOP:
+            reasons = [
+                f"to develop my bishop to the {to_name} diagonal.",
+                f"to activate my bishop on {to_name}.",
+                f"to place my bishop on a useful diagonal.",
+            ]
+            parts.append(random.choice(reasons))
+        elif piece and piece.piece_type == chess.ROOK:
+            file = chess.square_file(bot_move.to_square)
+            reasons = [
+                f"to activate my rook on the {chr(ord('a')+file)}-file.",
+                f"to double rooks or connect them.",
+                f"to place my rook on a more active square.",
+            ]
+            parts.append(random.choice(reasons))
+        elif piece and piece.piece_type == chess.QUEEN:
+            reasons = [
+                f"to bring my queen into the game on {to_name}.",
+                f"to centralize my queen.",
+                f"to create threats with my queen.",
+            ]
+            parts.append(random.choice(reasons))
+        else:
+            parts.append("to improve my position.")
 
         return " ".join(parts)
 

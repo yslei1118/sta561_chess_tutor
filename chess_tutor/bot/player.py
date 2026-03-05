@@ -118,13 +118,44 @@ class ChessTutorBot:
         if features[29] > 0:
             key_features.append(f"{int(features[29])} hanging piece(s)")
 
-        # Plan suggestion
-        plans = {
-            "opening": "Focus on development: get your pieces out and control the center.",
-            "middlegame": "Look for tactical opportunities and improve your worst-placed piece.",
-            "endgame": "Activate your king and push passed pawns.",
-        }
-        suggested_plan = plans.get(phase, "Evaluate the position and find the best plan.")
+        # Plan suggestion — context-aware
+        import random
+        if phase == "opening":
+            opening_plans = []
+            # Check castling
+            if board.has_castling_rights(board.turn):
+                opening_plans.append("Consider castling to get your king to safety.")
+            # Check development
+            if features[21] < 3:  # development_score
+                opening_plans.append("Develop your minor pieces (knights and bishops) before moving pawns too much.")
+            opening_plans.append("Control the center with pawns and pieces.")
+            if features[13] < 20:  # mobility
+                opening_plans.append("Your position is a bit cramped — try to free your pieces.")
+            suggested_plan = random.choice(opening_plans)
+        elif phase == "middlegame":
+            mid_plans = [
+                "Look for tactical opportunities — checks, captures, and threats.",
+                "Improve your worst-placed piece.",
+                "Consider a pawn break to open the position.",
+            ]
+            if abs(material) > 200:
+                mid_plans.append("You have a material advantage — try to simplify and trade pieces.")
+            if features[29] > 0:  # hanging pieces
+                mid_plans.append("Watch out! You have undefended pieces — protect them first.")
+            if features[13] > 30:  # high mobility
+                mid_plans.append("You have many options — look for the most forcing continuation.")
+            suggested_plan = random.choice(mid_plans)
+        elif phase == "endgame":
+            end_plans = [
+                "Activate your king — in the endgame, the king is a fighting piece.",
+                "Push your passed pawns towards promotion.",
+                "Centralize your pieces and cut off the opponent's king.",
+            ]
+            if features[19] > 0:  # passed pawns
+                end_plans.append("You have passed pawn(s) — support and advance them!")
+            suggested_plan = random.choice(end_plans)
+        else:
+            suggested_plan = "Evaluate the position and find the best plan."
 
         # Move predictions
         move_predictions = []
