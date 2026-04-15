@@ -175,6 +175,61 @@ For each feedback arm $a$, maintain Bayesian linear regression $r = \theta_a^\to
 | F6 | Encouragement | General reinforcement |
 | F7 | Simplification | Endgame, strategy |
 
+## Technical Appendix
+
+### Reproducibility
+
+| Item | Detail |
+|------|--------|
+| Random seed | 42 (consistent across all scripts and models) |
+| Python version | 3.14 |
+| Key packages | numpy, pandas, scikit-learn, matplotlib, python-chess, pyarrow, zstandard |
+| Stockfish | Not required for demo (heuristic fallback available) |
+
+### Data
+
+| Item | Detail |
+|------|--------|
+| Source | Lichess open database (January 2013) |
+| Raw size | ~93 MB decompressed PGN |
+| ELO brackets | 1100, 1300, 1500, 1700, 1900 (±50) |
+| Sampling | Every 5th move, moves 5–40 |
+| Feature dimensions | 30 board + 10 move = 40 |
+| Demo dataset | 200 cached positions at `data/demo_cache/` (offline demo) |
+
+### Reward Definition
+
+| Component | Formula |
+|-----------|---------|
+| **Analytic** (`reward.py`) | `r = 0.5·sigmoid(Δcp) + 0.3·blunder_avoided + 0.2·continued_play` |
+| **Simulation** (`runner.py`) | `r = 0.4·base + 0.6·alignment + noise` |
+
+Alignment measures context-arm match (e.g., TACTICAL_ALERT scores higher when position complexity is high). Bandit experiments use simulated reward with known context-arm alignment structure to demonstrate policy learning. This is standard practice for offline bandit evaluation.
+
+### Key Hyperparameters
+
+| Parameter | Value |
+|-----------|-------|
+| RF trees | 500 |
+| RF max_depth | 20 |
+| RF min_samples_leaf | 5 |
+| Kernel bandwidth candidates | {25, 50, 75, 100, 150, 200, 300} (leave-one-bracket-out CV) |
+| Thompson Sampling v | 1.0 |
+| Thompson Sampling prior variance | 1.0 |
+| LinUCB α | 1.0 |
+| ε-Greedy ε | 0.1 |
+| Student simulator learning_rate | 0.01 (ZPD model) |
+
+### Timing (approximate)
+
+| Step | Duration |
+|------|----------|
+| Data download + parsing | ~5 min |
+| Feature extraction | ~10 min |
+| Model training (all architectures) | ~15 min |
+| Bandit experiments (200 episodes × 5 policies) | ~2 min |
+| **Total end-to-end** | **~35 min** |
+
 ## References
 
 - McIlroy-Young et al. (2020). *Aligning Superhuman AI with Human Behavior: Chess as a Model System.* KDD 2020. (Maia-1 — Architecture A per-ELO models)
