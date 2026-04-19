@@ -8,7 +8,7 @@
 
 1. **ELO-Conditioned Move Prediction** — Given a board position and a target ELO, predict which move a human at that skill level would play. Three architectures compared: per-bracket models (A), pooled with ELO feature (B), and Nadaraya-Watson kernel interpolation across brackets (C).
 
-2. **Kernel Interpolation (Novel Contribution)** — Gaussian kernel smoothing over ELO brackets enables continuous skill-level queries without retraining. Bandwidth selected via leave-one-bracket-out CV.
+2. **Kernel Interpolation (Methodological Extension)** — Gaussian kernel smoothing over ELO brackets enables **continuous skill-level queries** without retraining (e.g., ELO=1640 between training brackets). Bandwidth selected via leave-one-bracket-out CV. On raw top-1 accuracy, the simpler pooled model (B) actually wins; C's contribution is inference-time flexibility, not accuracy.
 
 3. **Contextual Thompson Sampling** — A linear contextual bandit selects among 7 feedback types (tactical alert, blunder warning, encouragement, etc.) based on a 20-dimensional context vector capturing board state, student skill, and position complexity.
 
@@ -18,12 +18,16 @@
 
 | Metric | Value |
 |--------|-------|
-| Move prediction top-1 accuracy | 13–17% (vs ~3% random) |
-| Move prediction top-5 accuracy | 34–44% |
-| Cross-ELO diagonal dominance | 4/5 brackets |
-| Blunder detection AUC | 0.926 |
-| Thompson Sampling vs Random | +12.3% reward |
+| Move prediction top-1 accuracy per bracket (Arch A, RF) | 13.5%–16.7% (vs ~3% random) |
+| Move prediction top-5 accuracy per bracket | 34.7%–42.9% |
+| Cross-ELO diagonal dominance | 3/5 brackets (1500/1700/1900); 1100 and 1300 are predicted most accurately by the 1700-bracket model — a real finding about cross-bracket generalization |
+| Bandit reward architecture | **pure empirical** — `r = max(0, 1 − cp_loss/200)`, **no alignment term** |
+| cp_loss source | empirical percentile draw from 22,712 Stockfish-labeled real moves, bucketed by ELO and modulated by **student's concept-specific mastery** (concept selected by board phase + tactical content) |
+| Primary experiment (300 ep × 30 steps, pure empirical reward) | TS 25.65; ε-Greedy 25.65; LinUCB 25.60; Random 25.59; Rule 25.52 (all within 0.5%, std ≈ 4.2) |
+| Honest finding | **All 5 policies are statistically indistinguishable under pure empirical reward** — the gap is smaller than the standard deviation. Any ranking between them is within noise. |
+| Previous (alignment-based) result | LinUCB 17.96 ≫ others — we removed the alignment term because bandit was mostly recovering our own hand-crafted rule. Under a genuinely empirical reward, the apparent bandit superiority disappears. |
 | Regret | Sub-linear ✓ |
+| Real Stockfish-labeled blunder rate (across brackets) | ~10% (stable) |
 
 <p align="center">
   <img src="results/plots/cross_elo_heatmap.png" width="45%" />
@@ -38,7 +42,7 @@
 
 ```
 sta561_chess_tutor/
-├── chess_tutor/                # Main package (35 modules, ~3500 LOC)
+├── chess_tutor/                # Main package (35 modules, ~4400 LOC)
 │   ├── config.py               # Global constants and hyperparameters
 │   ├── data/                   # Data pipeline
 │   │   ├── download.py         #   Lichess PGN downloader
@@ -118,12 +122,44 @@ python scripts/build_candidate_dataset.py
 # 4. Train move predictors (Architectures A, B, C)
 python scripts/train_and_evaluate.py
 
-# 5. Run blunder detection, bandit experiments, generate all plots
+# 5. Run bandit experiments and generate all plots
 python scripts/run_final_experiment.py
 
 # 6. Launch demo notebook
 jupyter notebook chess_tutor/demo/chess_tutor_demo.ipynb
 ```
+
+## Testing
+
+The project has a comprehensive pytest-based test suite with **140 tests** across
+11 modules, covering all core probabilistic ML components: mathematical utilities,
+feature extraction, Nadaraya-Watson kernel interpolation, 5 bandit policies,
+context builder, reward function, feedback generation, student simulator, and the
+ChessTutorBot including its ELO-differentiation behavior. Every test is
+deterministic (fixed seed) and fast (<30 s wall-clock).
+
+```bash
+# Run all tests
+pytest tests/ -q
+
+# With coverage (results written to results/htmlcov/)
+pytest tests/ --cov=chess_tutor --cov-report=term-missing --cov-report=html:results/htmlcov -q
+
+# Skip the slow tests (>1s)
+pytest tests/ -m "not slow" -q
+```
+
+Current coverage on core ML modules:
+- `teaching/reward.py`: 100%
+- `teaching/bandit.py`: 97%
+- `teaching/context.py`: 95%
+- `data/extract_features.py`: 96%
+- `feedback/generator.py`: 78%
+- `simulation/student_simulator.py`: 70%
+- `bot/player.py`: 62%
+- Data-pipeline modules (`download`, `parse_pgn`, `dataset`, `stockfish_eval`)
+  are covered implicitly by the end-to-end notebook run; they are not unit-tested
+  because they require network, external binaries, or large input files.
 
 ## Methods
 
@@ -154,6 +190,17 @@ P(m \mid x, s^*) = \frac{\sum_k K_h(s^* - s_k) \cdot P_k(m \mid x)}{\sum_k K_h(s
 ```
 
 where $K_h$ is a Gaussian kernel with bandwidth $h$ selected by leave-one-bracket-out CV.
+
+**Ablation result (real numbers from `results/ablation_table.csv`):**
+
+| Architecture | Top-1 |
+|--------------|-------|
+| B (Pooled+ELO) | **0.1582** |
+| C (Kernel, bw=200) | 0.1533 |
+| C (Kernel, bw=300, CV-selected) | see FAQ Q3 — CV picks the largest bandwidth in our sweep; at that width the kernel is near-uniform and C approximates a pooled model |
+| A (Per-bracket, RF) | 0.1516 |
+
+B wins on raw top-1. C's value is methodological: it supports **continuous ELO queries** (e.g., ELO=1640) through inference-time kernel smoothing, which B cannot provide meaningfully. See `FAQ.md` Q2–Q3 for the honest discussion.
 
 ### Contextual Thompson Sampling
 

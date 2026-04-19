@@ -10,49 +10,6 @@ from ..config import (
 )
 
 
-def parse_single_game(game: chess.pgn.Game) -> list[dict]:
-    """Extract position records from a single game.
-
-    Returns:
-        List of dicts, each representing one position in the game.
-    """
-    headers = game.headers
-    white_elo = int(headers.get("WhiteElo", 0))
-    black_elo = int(headers.get("BlackElo", 0))
-    result = headers.get("Result", "*")
-    time_control = headers.get("TimeControl", "")
-    game_id = headers.get("Site", headers.get("Event", ""))
-
-    records = []
-    board = game.board()
-    move_num = 0
-
-    for node in game.mainline():
-        move_num += 1
-        move = node.move
-
-        if MIN_MOVE_NUMBER <= move_num <= MAX_MOVE_NUMBER:
-            if move_num % MOVE_SAMPLE_INTERVAL == 0:
-                player_elo = white_elo if board.turn == chess.WHITE else black_elo
-                records.append({
-                    "game_id": game_id,
-                    "move_number": move_num,
-                    "fen": board.fen(),
-                    "white_elo": white_elo,
-                    "black_elo": black_elo,
-                    "side_to_move": "white" if board.turn == chess.WHITE else "black",
-                    "player_elo": player_elo,
-                    "move_uci": move.uci(),
-                    "move_san": board.san(move),
-                    "result": result,
-                    "time_control": time_control,
-                })
-
-        board.push(move)
-
-    return records
-
-
 def parse_pgn_file(
     pgn_path: str,
     elo_brackets: list[int] | None = None,

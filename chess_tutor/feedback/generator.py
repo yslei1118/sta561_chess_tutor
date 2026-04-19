@@ -332,7 +332,19 @@ class FeedbackGenerator:
     def select_best_feedback_type(self, board: chess.Board,
                                    student_elo: int,
                                    engine_eval: dict) -> FeedbackType:
-        """Heuristic feedback selection — varies based on position features."""
+        """Heuristic feedback selection, varying by position **and** student ELO.
+
+        Each feedback type has a base position-feature score plus an
+        ELO-conditioned modifier:
+
+        * Beginners (< 1300): prefer immediate-safety feedback
+          (BLUNDER_WARNING, SIMPLIFICATION, ENCOURAGEMENT).
+        * Intermediate (1300–1700): balanced, slight bias toward TACTICAL_ALERT
+          and MOVE_COMPARISON.
+        * Advanced (>= 1700): prefer nuanced feedback
+          (STRATEGIC_NUDGE, MOVE_COMPARISON, PATTERN_RECOGNITION); de-prioritize
+          BLUNDER_WARNING (they can see those themselves).
+        """
         from ..data.extract_features import extract_board_features, detect_game_phase
 
         features = extract_board_features(board)
@@ -342,49 +354,59 @@ class FeedbackGenerator:
         checks = sum(1 for m in board.legal_moves if board.gives_check(m))
         captures = sum(1 for m in board.legal_moves if board.is_capture(m))
 
+        # Skill tier as a smooth scalar in [0, 1]
+        skill = max(0.0, min(1.0, (student_elo - 1100) / 800.0))
+
         # Score each feedback type based on position
         scores = {}
 
-        # Tactical alert: when there are checks, captures, or big material swings
+        # Tactical alert: checks, captures, big swings; intermediate/advanced care more
         scores[FeedbackType.TACTICAL_ALERT] = checks * 3 + max(0, captures - 1) * 2
         if abs(engine_eval.get("score_cp", 0)) > 200:
             scores[FeedbackType.TACTICAL_ALERT] += 5
+        scores[FeedbackType.TACTICAL_ALERT] += 1.5 * skill  # experts attuned to tactics
 
-        # Strategic nudge: quiet positions
+        # Strategic nudge: quiet positions; advanced players most benefit
         scores[FeedbackType.STRATEGIC_NUDGE] = max(0, 3 - checks * 2 - captures)
         if phase == "middlegame" and mobility > 20:
             scores[FeedbackType.STRATEGIC_NUDGE] += 2
+        scores[FeedbackType.STRATEGIC_NUDGE] += 2.0 * skill
 
-        # Blunder warning: when there are hanging pieces or exposed king
+        # Blunder warning: beginners need most; experts already see these
         scores[FeedbackType.BLUNDER_WARNING] = 0
         if features[29] > 0:  # hanging pieces
             scores[FeedbackType.BLUNDER_WARNING] += 4
         if features[14] < 2:  # king safety
             scores[FeedbackType.BLUNDER_WARNING] += 2
+        scores[FeedbackType.BLUNDER_WARNING] += 2.5 * (1 - skill)
 
-        # Pattern recognition: endgames and known structures
+        # Pattern recognition: advanced players appreciate named patterns
         scores[FeedbackType.PATTERN_RECOGNITION] = 0
         if phase == "endgame":
             scores[FeedbackType.PATTERN_RECOGNITION] += 4
         if phase == "opening":
             scores[FeedbackType.PATTERN_RECOGNITION] += 2
+        scores[FeedbackType.PATTERN_RECOGNITION] += 1.5 * skill
 
-        # Encouragement: when player has advantage
+        # Move comparison: requires concrete calculation; intermediate+ useful
+        scores[FeedbackType.MOVE_COMPARISON] = 1
+        scores[FeedbackType.MOVE_COMPARISON] += 1.5 * skill
+
+        # Encouragement: beginners benefit; experts less (can be patronizing)
         scores[FeedbackType.ENCOURAGEMENT] = 0
         if material > 100 and board.turn == chess.WHITE:
             scores[FeedbackType.ENCOURAGEMENT] += 3
         elif material < -100 and board.turn == chess.BLACK:
             scores[FeedbackType.ENCOURAGEMENT] += 3
+        scores[FeedbackType.ENCOURAGEMENT] += 2.0 * (1 - skill)
 
-        # Simplification: when ahead in material
+        # Simplification: technique-based; useful for both but with different framing
         scores[FeedbackType.SIMPLIFICATION] = 0
         if abs(material) > 200:
             scores[FeedbackType.SIMPLIFICATION] += 3
+        scores[FeedbackType.SIMPLIFICATION] += 1.0 * (1 - skill)
 
-        # Move comparison: general fallback
-        scores[FeedbackType.MOVE_COMPARISON] = 1
-
-        # Add randomness to avoid always picking the same
+        # Random tie-breaker
         for ft in scores:
             scores[ft] += random.random() * 2
 

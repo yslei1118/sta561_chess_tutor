@@ -38,7 +38,7 @@ CONTEXT_FEATURE_NAMES = [
     'student_recent_cp_loss', 'weakness_tactical', 'weakness_strategic', 'weakness_endgame',
     'normalized_move_num', 'time_pressure', 'running_blunder_count',
     'trend_improving', 'trend_stable', 'trend_declining',
-    'game_result_prob', 'reserved_1', 'reserved_2'
+    'game_result_prob', 'phase_opening', 'phase_endgame'
 ]
 
 # =============================================================================

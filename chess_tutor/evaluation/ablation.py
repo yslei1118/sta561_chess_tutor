@@ -1,4 +1,16 @@
-"""Ablation study suite for systematic evaluation."""
+"""Ablation study suite for systematic evaluation.
+
+.. deprecated::
+    **This module is not used in the final submission.**
+
+    The ablation results reported in ``results/ablation_table.csv`` are
+    produced by ``scripts/run_final_experiment.py``, which uses the
+    candidate-ranking training pipeline directly. This module was written
+    against the (deprecated) ``MovePredictor`` multiclass interface and
+    is retained only as reference. Importing it will succeed, but calling
+    ``run_ablation_suite`` requires a dataset with a matching move vocab
+    — an API that the production pipeline does not provide.
+"""
 
 import numpy as np
 import pandas as pd

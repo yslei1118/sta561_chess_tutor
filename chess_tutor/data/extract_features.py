@@ -30,9 +30,14 @@ def compute_king_safety(board: chess.Board, color: chess.Color) -> tuple[int, in
     king_rank = chess.square_rank(king_sq)
     shield_rank = king_rank + (1 if color == chess.WHITE else -1)
 
+    # Use a set so that kings on the a- or h-file don't count the same
+    # shield pawn twice when the `min/max` clamp collapses two files
+    # into one (e.g. king on h-file: king_file+1 clamps to 7 == king_file).
+    candidate_files = {max(0, king_file - 1), king_file, min(7, king_file + 1)}
+
     shield_count = 0
-    for f in [max(0, king_file - 1), king_file, min(7, king_file + 1)]:
-        if 0 <= shield_rank <= 7:
+    if 0 <= shield_rank <= 7:
+        for f in candidate_files:
             sq = chess.square(f, shield_rank)
             piece = board.piece_at(sq)
             if piece and piece.piece_type == chess.PAWN and piece.color == color:

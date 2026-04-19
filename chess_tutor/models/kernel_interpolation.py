@@ -71,16 +71,38 @@ class NadarayaWatsonELO:
         elos: np.ndarray,
         bracket_models: dict,
         bandwidths: list[float] | None = None,
+        pos_idx: np.ndarray | None = None,
     ) -> float:
         """Select optimal bandwidth via leave-one-bracket-out CV.
 
-        For each bracket b:
-            1. Hold out bracket b's test data
-            2. Interpolate from remaining brackets
-            3. Measure accuracy on held-out bracket
+        Two modes:
+
+        * **Multiclass mode** (when ``pos_idx`` is ``None`` and the
+          bracket models output a full move distribution): each row's
+          prediction is the argmax class, compared with ``y``. This is
+          the mode intended for the original multiclass ``MovePredictor``
+          architecture.
+
+        * **Candidate-ranking mode** (when ``pos_idx`` is provided): the
+          bracket models are treated as binary classifiers of
+          ``P(played | board, move)`` on candidate rows. For each
+          held-out position, the predicted move is the candidate with
+          the highest interpolated score; accuracy is whether that
+          matches the played move (``y == 1``). This is the mode that
+          matches the actual candidate-ranking training pipeline in
+          ``scripts/train_and_evaluate.py``.
+
+        Args:
+            X: feature matrix, shape (n, d).
+            y: labels. Multiclass mode: class indices; candidate mode: {0,1}.
+            elos: ELO per row, shape (n,).
+            bracket_models: {elo_center: fitted_model}.
+            bandwidths: candidate bandwidths to sweep.
+            pos_idx: optional per-row position index. If provided, switches
+                to candidate-ranking mode.
 
         Returns:
-            Optimal bandwidth (argmax avg accuracy across held-out brackets)
+            Optimal bandwidth (argmax mean accuracy across held-out brackets).
         """
         if bandwidths is None:
             bandwidths = KERNEL_BANDWIDTH_CANDIDATES
@@ -92,41 +114,65 @@ class NadarayaWatsonELO:
         from ..config import ELO_BRACKET_WIDTH
 
         for bw in bandwidths:
-            nw = NadarayaWatsonELO(bandwidth=bw)
             accs = []
 
             for held_out in centers:
-                # Get held-out data
                 mask = np.abs(elos - held_out) <= ELO_BRACKET_WIDTH
                 if mask.sum() == 0:
                     continue
                 X_ho = X[mask]
                 y_ho = y[mask]
+                pidx_ho = pos_idx[mask] if pos_idx is not None else None
 
-                # Get predictions from remaining brackets
                 remaining = {c: m for c, m in bracket_models.items() if c != held_out}
                 if not remaining:
                     continue
 
+                # Collect per-bracket predictions at the held-out rows.
                 bracket_preds = {}
                 for c, model in remaining.items():
                     try:
                         bracket_preds[c] = model.predict_proba(X_ho)
                     except Exception:
                         continue
-
                 if not bracket_preds:
                     continue
 
-                interpolated = nw.interpolate(bracket_preds, float(held_out))
-                if interpolated.ndim == 2:
-                    pred_labels = interpolated.argmax(axis=1)
-                    acc = (pred_labels == y_ho).mean()
+                # Kernel-interpolate.
+                kernel_weights = np.array(
+                    [np.exp(-0.5 * ((held_out - c) / bw) ** 2)
+                     for c in bracket_preds.keys()]
+                )
+                kernel_weights /= kernel_weights.sum()
+                combined = None
+                for w, p in zip(kernel_weights, bracket_preds.values()):
+                    combined = w * p if combined is None else combined + w * p
+
+                if pidx_ho is not None:
+                    # Candidate-ranking mode: combined is shape (n, 2),
+                    # P(played)-column is [:, 1].
+                    played_score = combined[:, 1] if combined.ndim == 2 else combined
+                    correct = 0
+                    total = 0
+                    for pos in np.unique(pidx_ho):
+                        pm = pidx_ho == pos
+                        if y_ho[pm].sum() == 0:
+                            continue
+                        total += 1
+                        if y_ho[pm][np.argmax(played_score[pm])] == 1:
+                            correct += 1
+                    acc = correct / total if total > 0 else 0.0
                 else:
-                    acc = 0.0
+                    # Multiclass mode
+                    if combined.ndim == 2:
+                        pred_labels = combined.argmax(axis=1)
+                        acc = float((pred_labels == y_ho).mean())
+                    else:
+                        acc = 0.0
+
                 accs.append(acc)
 
-            avg_acc = np.mean(accs) if accs else 0.0
+            avg_acc = float(np.mean(accs)) if accs else 0.0
             if avg_acc > best_acc:
                 best_acc = avg_acc
                 best_bw = bw

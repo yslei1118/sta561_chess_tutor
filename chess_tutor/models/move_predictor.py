@@ -1,4 +1,29 @@
-"""ELO-conditioned human move predictor with three architectures."""
+"""ELO-conditioned human move predictor with three architectures.
+
+.. deprecated::
+    **This class is not used in the production training pipeline.**
+
+    The actual trained models in ``models/saved/*_candidate.pkl`` are
+    binary candidate-ranking classifiers — ``RandomForestClassifier``
+    trained on 40-dim ``(board_features, move_features)`` rows with
+    labels in ``{0, 1}`` (0 = not played, 1 = played). See
+    ``scripts/train_and_evaluate.py`` for the pipeline we actually use
+    and evaluate.
+
+    The ``MovePredictor`` class below implements a **multiclass**
+    interface whose ``predict_proba`` returns probabilities over a move
+    vocabulary. Feeding it the candidate-ranking artifacts would produce
+    garbage (2-column output treated as move ranks). ``bot/player.py``
+    bypasses this class entirely and uses a feature-based heuristic in
+    ``_get_human_probs``; ``MovePredictor`` is retained only because
+    ``chess_tutor/evaluation/ablation.py`` references it for a
+    legacy ablation that we do not run in the final experiment.
+
+    **For the submission, treat this file as reference / legacy code.**
+    The numbers reported in README come from ``scripts/train_and_evaluate.py``
+    (Architecture A) and ``scripts/run_final_experiment.py`` (the cross-ELO
+    matrix and ablation table), neither of which instantiates this class.
+"""
 
 import pickle
 import numpy as np
