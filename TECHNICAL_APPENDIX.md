@@ -299,8 +299,10 @@ appended as `(elo − 1100) / 800`. Same RF hyperparameters as Arch A.
 Given Architecture A's per-bracket predictions `P_k(m | x)` at bracket
 centres `s_k`, we interpolate to arbitrary target ELO `s*`:
 
-
-$$P(m \mid x, s^{*}) = \frac{\sum_{k} K_h(s^{*} - s_k) P_k(m \mid x)}{\sum_{k} K_h(s^{*} - s_k)}, \qquad K_h(u) = \exp\left(-\frac{1}{2}(u/h)^{2}\right)$$
+$$
+P(m \mid x, s^{*}) \;=\; \frac{\sum_k K_h(s^{*} - s_k)\, P_k(m \mid x)}{\sum_k K_h(s^{*} - s_k)},\qquad
+K_h(u) = \exp\!\left(-\tfrac{1}{2}\bigl(u/h\bigr)^{2}\right)
+$$
 
 
 Implementation: [models/kernel_interpolation.py:7](chess_tutor/models/kernel_interpolation.py#L7).
