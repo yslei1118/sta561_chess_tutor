@@ -2,7 +2,7 @@
 
 Group members: Yushu Lei, Jiahe Li, Ziyang Qin, Yiming Cui, Zherui Zhang 
 
-> This document is the **technical appendix** of the submission. It contains all
+> This document is the technical appendix of the submission. It contains all
 > technical details, mathematical definitions, code references, commands, data
 > provenance, hyperparameters, and raw results required to reproduce every
 > number, plot, and qualitative example reported in the main writeup. A reader
