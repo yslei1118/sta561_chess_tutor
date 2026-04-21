@@ -1,7 +1,5 @@
 # Chess Tutor: An Interactive Chess Teacher that Maximizes Student Improvement
 
-**STA 561 · Probabilistic Machine Learning · Final Project Technical Report**
-**作者：Dexter Lee ｜ 日期：2026-04-20**
 
 ---
 
