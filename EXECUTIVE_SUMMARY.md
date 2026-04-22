@@ -28,13 +28,13 @@ improve, rather than following a fixed rulebook written by us.
 We combined three ideas.
 
 **(1) Learn to move like a human at a given skill level.** Instead of
-asking an engine for its best move, we trained a model on roughly two
-million moves from real online games, grouped by the rating of the player
-who made them. The model learns the *distribution* of moves that, say,
-1200-rated players tend to play — including their typical mistakes —
-rather than the single best move. We also built a smoother on top of this
-so the tutor can play at any rating, not just the five rating buckets we
-trained on.
+asking an engine for its best move, we trained a model on roughly
+six hundred thousand positions from real online games, grouped by the
+rating of the player who made the move. The model learns the
+*distribution* of moves that, say, 1200-rated players tend to play —
+including their typical mistakes — rather than the single best move.
+We also built a smoother on top of this so the tutor can play at any
+rating, not just the five rating buckets we trained on.
 
 **(2) Simulate a student.** To study how feedback affects learning
 without running a year-long study on real humans, we built a simulator

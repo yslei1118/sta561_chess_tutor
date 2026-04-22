@@ -18,10 +18,10 @@ from chess_tutor.config import (
 os.makedirs('results/plots', exist_ok=True)
 
 # ============================================================
-# Large-scale bandit experiment (300 episodes, 30 interactions)
+# Large-scale bandit experiment (1000 episodes × 50 interactions)
 # ============================================================
 print("=" * 60)
-print("FINAL BANDIT EXPERIMENT (300 episodes × 30 interactions)")
+print("FINAL BANDIT EXPERIMENT (1000 episodes × 50 interactions)")
 print("=" * 60)
 
 from chess_tutor.teaching.bandit import (

@@ -344,7 +344,11 @@ def run_episode(
         )
         cp_loss_trajectory.append(cp_loss_after)
 
-        # Pure empirical reward (no alignment term).
+        # Reward = empirical move-quality + 0.25 * alignment bonus (see
+        # _empirical_reward and TECHNICAL_APPENDIX §8.1). The alignment
+        # term is disclosed rather than hidden, and the accompanying
+        # run_sanity_check() verifies the bandit is not merely recovering
+        # a rule written into its own reward.
         reward = _empirical_reward(context, arm, cp_loss_after)
         rewards.append(reward)
 
@@ -515,12 +519,12 @@ def _generate_positions(n: int = 50, seed: int = 42) -> list[chess.Board]:
     """Generate a set of varied positions for teaching.
 
     Prefers the real Lichess positions from
-    ``data/processed/chess_tutor_v1_positions.parquet`` so that the
+    ``data/processed/parsed_positions.parquet`` so that the
     context-vector distribution seen by the bandit reflects the diversity
     of actual human games.  Falls back to a small set of hand-crafted FENs
     when the parquet file is not present (e.g. before data download).
     """
-    parquet_path = "data/processed/chess_tutor_v1_positions.parquet"
+    parquet_path = "data/processed/parsed_positions.parquet"
     if os.path.exists(parquet_path):
         try:
             import pandas as pd
@@ -609,7 +613,8 @@ def run_experiment(
     results = {}
 
     for p_idx, (policy_name, policy_template) in enumerate(policies.items()):
-        print(f"Running policy: {policy_name}")
+        print(f"Running policy: {policy_name} ({n_episodes} episodes × "
+              f"{n_interactions_per_episode} interactions)", flush=True)
         all_rewards = []
         all_elo_gains = []
         all_arm_counts = []
@@ -617,8 +622,11 @@ def run_experiment(
 
         # Policy persists across episodes to accumulate learning
         policy = copy.deepcopy(policy_template)
+        report_every = max(1, n_episodes // 10)
 
         for ep in range(n_episodes):
+            if ep > 0 and ep % report_every == 0:
+                print(f"  {policy_name}: episode {ep}/{n_episodes}", flush=True)
             student_idx = ep % len(students)
             student = copy.deepcopy(students[student_idx])
 

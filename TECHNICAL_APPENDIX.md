@@ -200,12 +200,27 @@ These files are the **source of truth** for cp_loss in the simulator
 bucketed by nearest ELO bracket and sorted ascending so percentile lookup
 is O(1).
 
-### 3.4 Data commitment
+### 3.4 Reproduction
 
-We ship, under `data/demo_cache/` and `data/processed/`, a ready-to-use
-snapshot of the post-Stockfish stage (22,712 cp_losses, 2.3 M candidate
-rows) so experiments can be reproduced **without** re-running Stockfish
-or re-downloading PGNs.
+`data/` is not checked in (~330 MB). Regenerate it from a bare clone by
+running, in order:
+
+```bash
+python -c "from chess_tutor.data.download import download_lichess_pgn; \
+           download_lichess_pgn(year=2014, month=1)"            # §2, ~1 min
+python -c "from chess_tutor.data.parse_pgn import parse_pgn_file; \
+           parse_pgn_file('data/raw/lichess_2014_01.pgn', \
+                          max_games_per_bracket=100_000) \
+           .to_parquet('data/processed/parsed_positions.parquet')"  # §3.1, ~15 min
+python scripts/build_candidate_dataset.py                       # §3.2, ~3 min
+python scripts/label_real_blunders.py                           # §3.3, ~2 h
+python scripts/train_and_evaluate.py                            # §5, ~8 min
+```
+
+Steps 1–5 together produce `models/saved/{models_a,model_b,model_c}*.pkl`
+and every numpy / parquet file referenced in §§4–12. Step 4 (Stockfish
+labelling) is the only expensive one; the pipeline is deterministic at
+`random_state=42`.
 
 ---
 
@@ -720,7 +735,7 @@ results = run_experiment(students, policies,
 
 - **Episodes**: 1000.
 - **Interactions per episode**: 50.
-- **Positions**: drawn from `data/processed/chess_tutor_v1_positions.parquet`
+- **Positions**: drawn from `data/processed/parsed_positions.parquet`
   via [runner._generate_positions](chess_tutor/simulation/runner.py#L514).
   Falls back to 14 hand-curated FENs covering opening / middlegame / endgame
   if the parquet is missing.
@@ -957,12 +972,10 @@ integration episode.
 
 From a bare clone:
 
-1. Install `requirements.txt`.
-2. Either rebuild processed tensors from raw Lichess PGNs
-   ([scripts/build_candidate_dataset.py](scripts/build_candidate_dataset.py)
-   and [scripts/label_real_blunders.py](scripts/label_real_blunders.py) —
-   the latter requires Stockfish), or use the shipped snapshot under
-   `data/processed/` and `data/demo_cache/`.
+1. Install `requirements.txt`; install Stockfish on `PATH` (or set
+   `STOCKFISH_PATH`) if you plan to regenerate cp_loss labels.
+2. Rebuild processed tensors from raw Lichess PGNs using the five-command
+   sequence in §3.4.
 3. Train the imitation models:
    [scripts/train_and_evaluate.py](scripts/train_and_evaluate.py).
 4. Run the main experiment

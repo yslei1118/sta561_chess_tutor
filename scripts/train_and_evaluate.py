@@ -99,7 +99,7 @@ for b in ELO_BRACKETS:
         continue
     X_b, y_b = X_train[elo_mask], y_train[elo_mask]
     print(f"  Bracket {b}: training on {X_b.shape[0]} rows ({y_b.sum()} positives)...", flush=True)
-    clf = RandomForestClassifier(n_estimators=200, max_depth=15, n_jobs=-1, random_state=42)
+    clf = RandomForestClassifier(n_estimators=200, max_depth=15, n_jobs=-1, random_state=42, verbose=1)
     clf.fit(X_b, y_b)
     models_a[b] = clf
 
@@ -118,7 +118,7 @@ elo_feat_train = ((elos_train - 1100) / 800).reshape(-1, 1)
 X_train_b = np.hstack([X_train, elo_feat_train])
 
 print(f"  Training on {X_train_b.shape[0]} rows...", flush=True)
-clf_b = RandomForestClassifier(n_estimators=200, max_depth=15, n_jobs=-1, random_state=42)
+clf_b = RandomForestClassifier(n_estimators=200, max_depth=15, n_jobs=-1, random_state=42, verbose=1)
 clf_b.fit(X_train_b, y_train)
 
 elo_feat_test = ((elos_test - 1100) / 800).reshape(-1, 1)

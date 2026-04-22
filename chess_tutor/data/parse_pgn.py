@@ -31,12 +31,21 @@ def parse_pgn_file(
 
     records = []
     bracket_counts = {b: 0 for b in elo_brackets}
+    games_scanned = 0
 
     with open(pgn_path) as pgn_file:
         while True:
             game = chess.pgn.read_game(pgn_file)
             if game is None:
                 break
+            games_scanned += 1
+            if games_scanned % 10_000 == 0:
+                kept = sum(bracket_counts.values())
+                print(
+                    f"  parsed {games_scanned:,} games, kept {kept:,} "
+                    f"({bracket_counts})",
+                    flush=True,
+                )
 
             headers = game.headers
             try:

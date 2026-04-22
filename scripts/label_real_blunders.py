@@ -13,6 +13,8 @@ Usage:
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import os
+import shutil
 import time
 import numpy as np
 import pandas as pd
@@ -20,10 +22,32 @@ import chess
 import chess.engine
 from multiprocessing import Pool
 
-STOCKFISH_PATH = r"C:\Users\admin\AppData\Local\Microsoft\WinGet\Packages\Stockfish.Stockfish_Microsoft.Winget.Source_8wekyb3d8bbwe\stockfish\stockfish-windows-x86-64-avx2.exe"
+
+def _resolve_stockfish_path() -> str:
+    """Return a usable Stockfish executable path.
+
+    Resolution order:
+      1. ``STOCKFISH_PATH`` env var
+      2. ``stockfish`` on ``PATH`` (``/opt/homebrew/bin/stockfish`` on macOS,
+         ``/usr/bin/stockfish`` on Linux, ``stockfish.exe`` on Windows)
+    """
+    env = os.environ.get("STOCKFISH_PATH")
+    if env and os.path.exists(env):
+        return env
+    which = shutil.which("stockfish")
+    if which:
+        return which
+    raise FileNotFoundError(
+        "Stockfish executable not found. Install it (e.g. "
+        "`brew install stockfish`, `apt install stockfish`, or download "
+        "from https://stockfishchess.org/download/) and make sure it is "
+        "on PATH, or set STOCKFISH_PATH=/abs/path/to/stockfish."
+    )
+
+
 DEPTH = 12  # depth 12 is sufficient for blunder detection (cp_loss > 100)
 BLUNDER_THRESHOLD_CP = 100  # matches config.py
-N_WORKERS = 8  # M1 Pro has 8 CPU cores
+N_WORKERS = int(os.environ.get("STOCKFISH_WORKERS", max(1, os.cpu_count() or 1)))
 
 
 def evaluate_chunk(args):
@@ -32,7 +56,7 @@ def evaluate_chunk(args):
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
     chunk_id, pairs = args
-    engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+    engine = chess.engine.SimpleEngine.popen_uci(_resolve_stockfish_path())
     results = []
     for fen, move_uci in pairs:
         try:
@@ -59,8 +83,9 @@ def evaluate_chunk(args):
 
 
 def main():
-    print("Loading played-move positions and features ...")
-    df = pd.read_parquet("data/processed/chess_tutor_v1_positions.parquet")
+    print(f"Using Stockfish at: {_resolve_stockfish_path()}", flush=True)
+    print("Loading played-move positions and features ...", flush=True)
+    df = pd.read_parquet("data/processed/parsed_positions.parquet")
     print(f"  Total rows: {len(df):,}")
 
     y = np.load("data/processed/candidate_y.npy")
