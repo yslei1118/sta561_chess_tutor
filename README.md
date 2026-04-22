@@ -103,11 +103,11 @@ python scripts/build_candidate_dataset.py
 # 4. Train Architectures A, B, C (~8 min on M1 Pro / 4-core laptop)
 python scripts/train_and_evaluate.py
 
-# 5. (optional) Relabel cp_loss with Stockfish depth 12 (~2 h)
+# 5. Relabel cp_loss with Stockfish depth 12 (~2 h)
 python scripts/label_real_blunders.py
 ```
 
-After step 4 the trained models land in `models/saved/` and the notebook,
+After the trained models land in `models/saved/` and the notebook,
 interactive CLI, and all `scripts/run_*.py` experiments become runnable.
 
 ## How to run
@@ -122,7 +122,7 @@ interactive CLI, and all `scripts/run_*.py` experiments become runnable.
   `python scripts/bandit_hyperparam_sweep.py`.
 - **Reproduce the architecture ablation:**
   `python scripts/arch_c_retune.py`.
-- **Reproduce the Stockfish labels (slow, optional):**
+- **Reproduce the Stockfish labels:**
   `python scripts/label_real_blunders.py`. Defaults to `stockfish` on `PATH`;
   override with `STOCKFISH_PATH=/abs/path/to/stockfish`.
 - **Run the test suite:** `pytest tests/ -q` (174 tests, ~3 seconds).
