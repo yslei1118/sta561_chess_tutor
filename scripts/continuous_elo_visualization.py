@@ -29,6 +29,9 @@ import matplotlib.pyplot as plt
 
 from chess_tutor.config import ELO_BRACKETS, ELO_BRACKET_WIDTH
 from chess_tutor.models.kernel_interpolation import NadarayaWatsonELO
+from chess_tutor.utils.plot_style import apply_journal_style, PRIMARY, GRAY
+
+apply_journal_style()
 
 
 def load_models():
@@ -99,50 +102,54 @@ def main():
 
     # Sweep ELOs, including both bracket centers and interstitial values
     elos = np.linspace(900, 2100, 241)  # step of 5
+    bandwidth = 100  # default; per-bandwidth comparison lives in kernel_weights.png
 
-    # Per-bandwidth comparison
-    bandwidths = [50, 100, 300]
-
+    # Small-multiples grid: one panel per move, A (step) vs C (smooth)
+    n = len(legal_moves_to_plot)
+    n_cols = 2
+    n_rows = (n + n_cols - 1) // n_cols
     fig, axes = plt.subplots(
-        len(legal_moves_to_plot), len(bandwidths),
-        figsize=(4.5 * len(bandwidths), 2.8 * len(legal_moves_to_plot)),
-        sharex=True, squeeze=False,
+        n_rows, n_cols,
+        figsize=(5 * n_cols, 3 * n_rows),
+        sharex=True, sharey=True, squeeze=False,
     )
 
-    for row_idx, (name, move) in enumerate(legal_moves_to_plot):
+    for idx, (name, move) in enumerate(legal_moves_to_plot):
+        r, c = divmod(idx, n_cols)
+        ax = axes[r, c]
         query = build_query_row(board, move)
         probs_a = architecture_a_prob_vs_elo(models, query, elos)
+        probs_c = architecture_c_prob_vs_elo(models, query, elos, bandwidth=bandwidth)
 
-        for col_idx, bw in enumerate(bandwidths):
-            ax = axes[row_idx, col_idx]
-            probs_c = architecture_c_prob_vs_elo(models, query, elos, bandwidth=bw)
+        ax.plot(elos, probs_a, label="Arch A (per-bracket)",
+                color=GRAY, linestyle="--", lw=1.3, drawstyle="steps-mid")
+        ax.plot(elos, probs_c, label=f"Arch C (NW, bw={bandwidth})",
+                color=PRIMARY, lw=1.7)
+        # Mark bracket centers
+        for b in ELO_BRACKETS:
+            ax.axvline(b, color=GRAY, linestyle=":", alpha=0.35, lw=0.6)
 
-            ax.plot(elos, probs_a, label="Arch A (nearest)", lw=1.5,
-                    color="#e74c3c", alpha=0.7, drawstyle="steps-mid")
-            ax.plot(elos, probs_c, label=f"Arch C (bw={bw})", lw=2.2,
-                    color="#2ecc71")
-            # Mark bracket centers
-            for b in ELO_BRACKETS:
-                ax.axvline(b, color="gray", linestyle=":", alpha=0.35, lw=0.8)
+        ax.set_xlim(900, 2100)
+        ax.set_title(f"Move: {name}")
+        if r == n_rows - 1:
+            ax.set_xlabel("Target ELO")
+        if c == 0:
+            ax.set_ylabel(r"$P(\mathrm{move} \mid \mathrm{ELO})$")
 
-            ax.set_xlim(900, 2100)
-            ax.set_ylabel(f"P({name} | board, ELO)" if col_idx == 0 else "")
-            if row_idx == 0:
-                ax.set_title(f"Kernel bandwidth h = {bw}", fontsize=11)
-            if row_idx == len(legal_moves_to_plot) - 1:
-                ax.set_xlabel("Target ELO")
-            ax.grid(alpha=0.25)
-            if row_idx == 0 and col_idx == 0:
-                ax.legend(fontsize=9, loc="best")
+    # Hide any unused axes in the last row
+    for idx in range(n, n_rows * n_cols):
+        r, c = divmod(idx, n_cols)
+        axes[r, c].axis("off")
 
+    # Single legend (in the first panel)
+    axes[0, 0].legend(loc="best", fontsize=8)
     fig.suptitle(
-        "Continuous-ELO move probability: Architecture C's defining advantage\n"
-        "(Same board, four candidate moves; Arch A is a step function, Arch C is smooth)",
-        fontsize=12, y=0.995,
+        "Continuous ELO interpolation — Arch A vs Arch C",
+        y=1.00, fontsize=12,
     )
     plt.tight_layout()
     out = "results/plots/continuous_elo_interpolation.png"
-    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.savefig(out)
     plt.close()
     print(f"Saved: {out}")
 

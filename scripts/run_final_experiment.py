@@ -17,6 +17,11 @@ from chess_tutor.config import (
     FEEDBACK_TYPE_NAMES, BOARD_FEATURE_NAMES, MOVE_FEATURE_NAMES,
     KERNEL_BANDWIDTH_CANDIDATES,
 )
+from chess_tutor.utils.plot_style import (
+    apply_journal_style, policy_color, PRIMARY, ACCENT,
+)
+
+apply_journal_style()
 
 SEED = 42
 
@@ -67,24 +72,22 @@ for name in ['Random', 'ε-Greedy (ε=0.1)', 'Rule-Based']:
     print(f"  TS vs {name}: {impr:+.1f}%")
 
 # Plot 6: Regret curves (with confidence bands)
-fig, ax = plt.subplots(figsize=(10, 6))
-colors = {'Thompson Sampling': '#2ecc71', 'ε-Greedy (ε=0.1)': '#3498db',
-          'LinUCB (α=1)': '#9b59b6', 'Random': '#e74c3c', 'Rule-Based': '#f39c12'}
+fig, ax = plt.subplots(figsize=(9, 5))
 for name, res in results.items():
     curves = res['regret_curves']
     mean_curve = curves.mean(axis=0)
-    std_curve = curves.std(axis=0) / np.sqrt(curves.shape[0])  # SEM
+    sem_curve = curves.std(axis=0) / np.sqrt(curves.shape[0])
     x = np.arange(len(mean_curve))
-    ax.plot(x, mean_curve, label=name, lw=2, color=colors.get(name, 'gray'))
-    ax.fill_between(x, mean_curve - 2*std_curve, mean_curve + 2*std_curve, alpha=0.15,
-                    color=colors.get(name, 'gray'))
-ax.set_xlabel('Interaction', fontsize=12)
-ax.set_ylabel('Cumulative Regret', fontsize=12)
-ax.set_title('Cumulative Regret by Policy (1000 episodes, mean ± 2 SEM)', fontsize=13)
-ax.legend(fontsize=10)
-ax.grid(alpha=0.3)
+    c = policy_color(name)
+    ax.plot(x, mean_curve, label=name, color=c)
+    ax.fill_between(x, mean_curve - 2*sem_curve, mean_curve + 2*sem_curve,
+                    alpha=0.15, color=c, linewidth=0)
+ax.set_xlabel('Interaction')
+ax.set_ylabel('Cumulative regret')
+ax.set_title('Cumulative regret by policy (1000 episodes, mean ± 2 SEM)')
+ax.legend(loc='lower right')
 plt.tight_layout()
-plt.savefig('results/plots/regret_curves.png', dpi=150, bbox_inches='tight')
+plt.savefig('results/plots/regret_curves.png')
 plt.close()
 print("Plot 6: Regret curves saved ✓")
 
@@ -97,39 +100,38 @@ print(f"  Sub-linear: first_half_rate={first_half:.4f}, second_half_rate={second
 
 # Plot 8: Arm distribution
 n_arms = len(FEEDBACK_TYPE_NAMES)
-fig, ax = plt.subplots(figsize=(14, 6))
+fig, ax = plt.subplots(figsize=(11, 4.5))
 x = np.arange(n_arms)
 width = 0.15
 for i, (pname, res) in enumerate(results.items()):
-    dist = res['arm_distribution']
+    dist = np.asarray(res['arm_distribution'], dtype=float)
     dist = dist / dist.sum() if dist.sum() > 0 else dist
-    ax.bar(x + i * width, dist[:n_arms], width, label=pname, color=colors.get(pname, 'gray'))
-ax.set_xticks(x + width * 2.5)
-ax.set_xticklabels(FEEDBACK_TYPE_NAMES, rotation=45, ha='right', fontsize=10)
-ax.set_ylabel('Selection Frequency', fontsize=12)
-ax.set_title('Feedback Type Selection by Policy', fontsize=13)
-ax.legend(fontsize=9)
-ax.grid(axis='y', alpha=0.3)
+    ax.bar(x + i * width, dist[:n_arms], width, label=pname,
+           color=policy_color(pname), edgecolor='black', linewidth=0.3)
+ax.set_xticks(x + width * (len(results) - 1) / 2)
+ax.set_xticklabels(FEEDBACK_TYPE_NAMES, rotation=18, ha='right', fontsize=9)
+ax.set_ylabel('Selection frequency')
+ax.set_title('Feedback-type selection by policy')
+ax.legend(loc='upper right', ncol=2)
 plt.tight_layout()
-plt.savefig('results/plots/arm_distribution.png', dpi=150, bbox_inches='tight')
+plt.savefig('results/plots/arm_distribution.png')
 plt.close()
 print("Plot 8: Arm distribution saved ✓")
 
 # Plot 10: Teaching effectiveness
-fig, ax = plt.subplots(figsize=(10, 6))
+fig, ax = plt.subplots(figsize=(8, 4.5))
 names_list = list(results.keys())
 gains = [results[n]['mean_elo_gain'] for n in names_list]
 stds = [results[n]['std_elo_gain'] for n in names_list]
-bar_colors = [colors.get(n, 'gray') for n in names_list]
-bars = ax.bar(range(len(names_list)), gains, yerr=stds, color=bar_colors,
-              capsize=5, edgecolor='black', linewidth=0.5)
+bar_colors = [policy_color(n) for n in names_list]
+ax.bar(range(len(names_list)), gains, yerr=stds, color=bar_colors,
+       capsize=3, edgecolor='black', linewidth=0.5, error_kw={'lw': 0.8})
 ax.set_xticks(range(len(names_list)))
-ax.set_xticklabels(names_list, rotation=45, ha='right', fontsize=10)
-ax.set_ylabel('Mean ELO Gain ± Std', fontsize=12)
-ax.set_title('Teaching Effectiveness: ELO Gain by Policy', fontsize=13)
-ax.grid(axis='y', alpha=0.3)
+ax.set_xticklabels(names_list, rotation=18, ha='right')
+ax.set_ylabel('Mean ELO gain ± std')
+ax.set_title('Teaching effectiveness: ELO gain by policy')
 plt.tight_layout()
-plt.savefig('results/plots/teaching_effectiveness.png', dpi=150, bbox_inches='tight')
+plt.savefig('results/plots/teaching_effectiveness.png')
 plt.close()
 print("Plot 10: Teaching effectiveness saved ✓")
 
@@ -143,7 +145,7 @@ from chess_tutor.student.model import StudentState
 from chess_tutor.feedback import FeedbackType, FeedbackGenerator
 import copy
 
-fig, ax = plt.subplots(figsize=(10, 6))
+fig, ax = plt.subplots(figsize=(9, 5))
 n_steps = 300
 fg = FeedbackGenerator()
 positions = [chess.Board(fen) for fen in [
@@ -153,8 +155,7 @@ positions = [chess.Board(fen) for fen in [
     "8/8/4k3/8/8/4K3/4P3/8 w - - 0 1",
 ]]
 
-for policy_name, color in [('Thompson Sampling', '#2ecc71'), ('LinUCB (α=1)', '#9b59b6'),
-                             ('Random', '#e74c3c'), ('Rule-Based', '#f39c12')]:
+for policy_name in ['Thompson Sampling', 'LinUCB (α=1)', 'Random', 'Rule-Based']:
     np.random.seed(42)
     student = StudentSimulator(elo=1200, learning_rate=0.03)
     policy = copy.deepcopy(policies[policy_name])
@@ -176,15 +177,14 @@ for policy_name, color in [('Thompson Sampling', '#2ecc71'), ('LinUCB (α=1)', '
         student.update_state(arm, cp, concepts)
         elo_hist.append(student.elo)
 
-    ax.plot(elo_hist, label=policy_name, lw=2, color=color)
+    ax.plot(elo_hist, label=policy_name, color=policy_color(policy_name))
 
-ax.set_xlabel('Teaching Interaction', fontsize=12)
-ax.set_ylabel('Student ELO', fontsize=12)
-ax.set_title('Simulated Student ELO Trajectories by Policy', fontsize=13)
-ax.legend(fontsize=10)
-ax.grid(alpha=0.3)
+ax.set_xlabel('Teaching interaction')
+ax.set_ylabel('Student ELO')
+ax.set_title('Simulated student ELO trajectories by policy')
+ax.legend(loc='best')
 plt.tight_layout()
-plt.savefig('results/plots/elo_trajectories.png', dpi=150, bbox_inches='tight')
+plt.savefig('results/plots/elo_trajectories.png')
 plt.close()
 print("Plot 7: ELO trajectories saved ✓")
 
@@ -348,22 +348,21 @@ print(abl_df.to_string(index=False))
 # Save as CSV
 abl_df.to_csv('results/ablation_table.csv', index=False)
 
-# Plot ablation as heatmap-like table
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.axis('off')
-table = ax.table(cellText=abl_df.values, colLabels=abl_df.columns,
-                 cellLoc='center', loc='center')
-table.auto_set_font_size(False)
-table.set_fontsize(10)
-table.scale(1.2, 1.5)
-# Color the accuracy column
-for i in range(len(abl_df)):
-    acc = float(abl_df.iloc[i]['Top-1 Accuracy'])
-    r = min(1, max(0, (acc - 0.10) / 0.10))
-    table[i+1, 2].set_facecolor((1-r, 1, 1-r))
-ax.set_title('Model Comparison: Architecture × Classifier', fontsize=13, pad=20)
+# Plot ablation as bar chart (single primary colour + random-baseline line)
+fig, ax = plt.subplots(figsize=(9, 4.5))
+labels = [f"{r['Architecture']} / {r['Classifier']}" for _, r in abl_df.iterrows()]
+values = [float(v) for v in abl_df['Top-1 Accuracy']]
+ax.bar(range(len(abl_df)), values, color=PRIMARY,
+       edgecolor='black', linewidth=0.5)
+ax.axhline(y=1/30, color=ACCENT, linestyle='--', lw=0.8,
+           label='random (1 / ~30 legal)')
+ax.set_xticks(range(len(abl_df)))
+ax.set_xticklabels(labels, rotation=25, ha='right', fontsize=8)
+ax.set_ylabel('Top-1 accuracy')
+ax.set_title('Architecture × classifier ablation')
+ax.legend(loc='lower right')
 plt.tight_layout()
-plt.savefig('results/plots/ablation_table.png', dpi=150, bbox_inches='tight')
+plt.savefig('results/plots/ablation_table.png')
 plt.close()
 print("Plot 9: Ablation table saved ✓")
 
