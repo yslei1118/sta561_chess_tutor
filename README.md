@@ -126,7 +126,7 @@ absent, but the reported results use the trained artifacts above.
 - **Reproduce the Stockfish labels:**
   `python scripts/label_real_blunders.py`. Defaults to `stockfish` on `PATH`;
   override with `STOCKFISH_PATH=/abs/path/to/stockfish`.
-- **Run the test suite:** `pytest tests/ -q` (174 tests, ~3 seconds).
+- **Run the test suite:** `pytest tests/ -q` (176 tests, ~3 seconds).
 
 ## Repository layout
 
@@ -150,7 +150,7 @@ sta561_chess_tutor/
 │   │   └── runner.py             # episode runner + sanity-check harness
 │   └── demo/chess_tutor_demo.ipynb   # interactive demo
 ├── scripts/                      # training, labeling, sweeps, ablation
-├── tests/                        # 174 pytest tests
+├── tests/                        # 176 pytest tests
 ├── data/                        # not tracked — regenerate via the commands above
 │   ├── raw/                     # Lichess PGN dump
 │   └── processed/               # parquet + numpy arrays consumed by training
@@ -212,4 +212,4 @@ sta561_chess_tutor/
 - `TECHNICAL_APPENDIX.md` — full technical report.
 - `chess_tutor/demo/chess_tutor_demo.ipynb` — runnable notebook demo.
 - `results/` — all CSVs and figures.
-- `tests/` — 174 pytest tests.
+- `tests/` — 176 pytest tests.

@@ -78,7 +78,7 @@ must be regenerated locally.
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 mkdir -p data/raw data/processed models/saved results/plots
-pytest tests/          # 174 tests, full suite should pass
+pytest tests/          # 176 tests, full suite should pass
 ```
 
 ---
