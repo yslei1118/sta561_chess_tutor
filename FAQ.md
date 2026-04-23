@@ -13,7 +13,7 @@ against the student is just a consistency check, not evidence of
 teaching. We took three concrete steps against this.
 
 First, the mistake distribution of the simulated student is **not**
-invented. We labeled 22,712 real moves from Lichess games with Stockfish
+invented. We labeled 35,140 real moves from Lichess games with Stockfish
 at depth 12, and the simulator samples from those empirical distributions
 conditioned on rating. A simulated 1100-rated student makes mistakes at
 roughly the size and frequency of real 1100-rated players.
