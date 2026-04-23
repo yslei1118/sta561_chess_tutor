@@ -48,7 +48,7 @@ Under the hood:
   Random Forest (A), pooled RF with rating as a feature (B), and
   Nadaraya–Watson kernel interpolation across brackets (C) for continuous
   ratings like ELO 1640.
-- **22,712 Stockfish depth-12 labels** on real played moves, used as the
+- **35,140 Stockfish depth-12 labels** on real played moves, used as the
   simulator's cp_loss distribution (so the "mistakes the simulated student
   makes" are calibrated to real-world distributions, not invented).
 - **Seven feedback types × three ELO tiers** of language templates, filled
@@ -98,11 +98,13 @@ python scripts/parse_positions.py
 # 3. Build candidate-ranking arrays (~3 min)
 python scripts/build_candidate_dataset.py
 
-# 4. Train Architectures A, B, C (~8 min on M1 Pro / 4-core laptop)
-python scripts/train_and_evaluate.py
-
-# 5. Relabel cp_loss with Stockfish depth 12 (~2 h)
+# 4. Label cp_loss with Stockfish depth 12 (required for §12 bandit numbers;
+#    train_and_evaluate does NOT consume these labels — skip if you only want
+#    to run the bot / demo notebook; ~15 min on an M1 Pro with 8 workers)
 python scripts/label_real_blunders.py
+
+# 5. Train Architectures A, B, C (~8 min on M1 Pro / 4-core laptop)
+python scripts/train_and_evaluate.py
 ```
 
 After the trained models land in `models/saved/`, the full experiment scripts
@@ -176,9 +178,13 @@ sta561_chess_tutor/
   stable from 1100 to 1900 (a real finding about how Lichess matchmaking
   distributes difficulty).
 - **Bandit comparison (1,000 sessions × 50 moves, empirical reward + 0.25
-  alignment bonus):** LinUCB and TS outperform Random by ~30% in mean
-  cumulative reward; Rule-Based baseline comes in ~20% below the bandits.
-  Full table in `results/bandit_comparison.csv`.
+  alignment bonus):** the three bandit policies (TS 43.57, ε-Greedy 43.72,
+  LinUCB 43.24) all beat Random (42.67) and Rule-Based (40.90) on mean
+  cumulative reward, but cluster within a std of ~5.7 and are
+  statistically indistinguishable from each other. The gap is sharper on
+  mean student ELO gain: ε-Greedy 352.7, TS 285.9, LinUCB 254.8, Random
+  248.8, Rule-Based 148.1 — bandits lift simulated students ~70–140% above
+  the rule-based baseline. Full table in `results/bandit_comparison.csv`.
 - **Self-reference sanity check:** shuffling the (feedback type → chess
   concept) mapping inside the simulator drops bandit performance to
   Random-baseline level, confirming the bandit is using the real mapping

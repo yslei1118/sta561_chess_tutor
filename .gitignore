@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# Environments
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+.vscode/
+.ipynb_checkpoints/
+.claude/
+
+# Regenerable data + models (see README for rebuild commands)
+data/raw/
+data/processed/
+models/saved/
+logs/
+results/.matplotlib/
+
+# Transient audit artifacts
+REFRESH_REPORT.md
+results_old_snapshot/

@@ -59,9 +59,9 @@ feedback" and "follow a fixed rulebook."
 
 Across 1,000 simulated teaching sessions of 50 moves each, the learning
 tutors substantially outperformed the fixed-rule baseline. The best
-learning strategy raised a simulated student's rating by roughly 490
-points on average, compared to 375 points under the rule-based tutor —
-an improvement of about 30 percent. The learning tutors also used a much
+learning strategy raised a simulated student's rating by roughly 350
+points on average, compared to 150 points under the rule-based tutor —
+more than a twofold improvement. The learning tutors also used a much
 wider variety of feedback styles, matching the intuition that different
 moments call for different coaching, while the rule-based baseline kept
 falling back on the same two responses. We also verified that the system

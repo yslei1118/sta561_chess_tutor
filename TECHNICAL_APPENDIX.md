@@ -185,16 +185,16 @@ Output:
 | `data/processed/real_cp_losses.npy` | `(N_played,)` | `float32` | `max(0, cp_before − cp_after)` |
 | `data/processed/real_blunder_labels.npy` | `(N_played,)` | `int32` | `1{cp_loss > 100}` |
 
-Our pre-computed file has **N_played = 22,712** (one per played move in the
-final dataset). Statistics of the empirical distribution we obtained:
+Our regenerated labels have **N_played = 35,140** (one per played move in the
+sampled candidate dataset). Statistics of the empirical distribution:
 
 | Statistic | Value |
 |---|---:|
-| mean cp_loss | ≈ 50 cp |
-| median | ≈ 17 cp |
-| p90 | ≈ 140 cp |
-| p99 | ≈ 560 cp |
-| blunder rate (cp_loss > 100) | ≈ 0.14 |
+| mean cp_loss | 68.9 cp |
+| median | 20.0 cp |
+| p90 | 125.0 cp |
+| p99 | 467.0 cp |
+| blunder rate (cp_loss > 100) | 0.136 |
 
 These files are the **source of truth** for cp_loss in the simulator
 (see [simulation/runner.py:22-60](chess_tutor/simulation/runner.py#L22-L60));
@@ -427,7 +427,7 @@ $$
 $$
 
 Calibration: 25 cp ↔ 1900, 60 cp ↔ 1500, 100 cp ↔ 1100, matching the
-per-bracket means in the 22,712-sample empirical distribution.
+per-bracket means in the 35,140-sample empirical distribution.
 
 ### 6.4 Trend detection (Welch t-test, 15 / 15)
 
@@ -542,7 +542,7 @@ Normalized to `[0, 1]`. Weights live in `REWARD_WEIGHTS` in
 [config.py:98](chess_tutor/config.py#L98).
 
 **(b) Empirical reward used in the main experiment** —
-[runner.py:_empirical_reward](chess_tutor/simulation/runner.py#L387):
+[runner.py:_empirical_reward](chess_tutor/simulation/runner.py#L391):
 
 $$
 r \;=\; \mathrm{clip}\!\bigl[\max(0,\, 1 - \mathrm{cp\_loss}/200) \;+\; 0.25 \cdot \mathrm{alignment}(\text{arm}, \text{context}) \;+\; \mathcal{N}(0, 0.05^{2}),\; 0,\; 1\bigr]
@@ -555,7 +555,7 @@ $$
 $$
 
 using the concept-to-context-index map at
-[runner.py:368](chess_tutor/simulation/runner.py#L368):
+[runner.py:372](chess_tutor/simulation/runner.py#L372):
 
 ```python
 _CONCEPT_CTX_IDX = {"tactics": 8, "strategy": 9, "endgame": 10}
@@ -576,7 +576,7 @@ to avoid.
 
 ### 8.3 Self-reference sanity check
 
-[runner.py:run_sanity_check](chess_tutor/simulation/runner.py#L429) runs
+[runner.py:run_sanity_check](chess_tutor/simulation/runner.py#L433) runs
 `n_seeds` episodes with the real `FEEDBACK_CONCEPT_MAP` and `n_seeds`
 episodes with a **permutation** of that map, then reports
 `delta = mean(real) − mean(shuffled)`.
@@ -742,7 +742,7 @@ results = run_experiment(students, policies,
 - **Episodes**: 1000.
 - **Interactions per episode**: 50.
 - **Positions**: drawn from `data/processed/parsed_positions.parquet`
-  via [runner._generate_positions](chess_tutor/simulation/runner.py#L514).
+  via [runner._generate_positions](chess_tutor/simulation/runner.py#L518).
   Falls back to 14 hand-curated FENs covering opening / middlegame / endgame
   if the parquet is missing.
 - **Policy persistence**: a single policy object is used across all
@@ -752,7 +752,7 @@ results = run_experiment(students, policies,
   resets.
 - **Seeding**: each `(policy, episode)` pair is seeded deterministically
   from `seed + policy_idx * 10_000 + ep`, covering both `numpy.random`
-  and stdlib `random` ([runner.run_episode](chess_tutor/simulation/runner.py#L284-L287)).
+  and stdlib `random` ([runner.run_episode](chess_tutor/simulation/runner.py#L284-L286)).
 
 ### 11.2 ELO trajectory plot (plot 7)
 
@@ -797,50 +797,52 @@ laptop. Full results in [results/hyperparam_sweep.csv](results/hyperparam_sweep.
 
 ```
 Policy,            Mean Cum. Reward, Std,   Mean ELO Gain, Arm Entropy
-Thompson Sampling, 46.883,           1.277, 488.3,          2.748
-ε-Greedy (ε=0.1),  46.391,           1.435, 499.4,          1.270
-LinUCB (α=1),      47.003,           1.231, 492.6,          2.698
-Random,            46.346,           1.582, 460.1,          2.807
-Rule-Based,        45.534,           2.054, 374.6,          0.827
+Thompson Sampling, 43.566,           5.649, 285.9,          2.727
+ε-Greedy (ε=0.1),  43.723,           5.169, 352.7,          1.356
+LinUCB (α=1),      43.244,           5.870, 254.8,          2.616
+Random,            42.666,           6.399, 248.8,          2.807
+Rule-Based,        40.896,           7.828, 148.1,          0.911
 ```
 
 Key observations:
 
-- **ELO gain relative to Rule-Based**: TS is +113.7 (+30.3 %),
-  LinUCB +118.0 (+31.5 %), ε-Greedy +124.8 (+33.3 %).
-- **Arm entropy**: TS 2.748 ≈ `log₂(7) = 2.807`, so the selection
-  distribution is broad; Rule-Based 0.83 confirms it collapses to ~2
+- **ELO gain relative to Rule-Based**: TS +137.8 (+93 %),
+  LinUCB +106.7 (+72 %), ε-Greedy +204.6 (+138 %).
+- **Arm entropy**: TS 2.727 ≈ `log₂(7) = 2.807`, so the selection
+  distribution is broad; Rule-Based 0.91 confirms it collapses to ~2
   arms, consistent with hand-coded branching.
-- **Cumulative reward**: LinUCB 47.003 > TS 46.883 > ε-Greedy 46.391
-  > Random 46.346 > Rule-Based 45.534.
-- **Reward standard deviation**: Rule-Based 2.054 is the highest
+- **Cumulative reward**: ε-Greedy 43.72 > TS 43.57 > LinUCB 43.24
+  > Random 42.67 > Rule-Based 40.90. The three bandit policies sit
+  within 0.5 of each other with stds of ~5.2–5.9, so they are
+  **statistically indistinguishable** on cumulative reward; the
+  separation that matters is bandits-as-a-group vs Random vs Rule-Based.
+- **Reward standard deviation**: Rule-Based 7.83 is the highest
   (narrow branching means its reward depends strongly on which
-  specific students it meets); TS 1.277 is lowest — evidence that
-  its learned policy smooths away student variation.
+  specific students it meets); TS / ε-Greedy / LinUCB sit at 5.17–5.87.
 
 ### 12.2 Architecture ablation — [results/ablation_table.csv](results/ablation_table.csv)
 
 ```
 Architecture,        Classifier, Top-1 Accuracy
-A (Per-bracket),     RF,         0.1638
-A (Per-bracket),     GBT,        0.1654
-A (Per-bracket),     LogReg,     0.1423
-B (Pooled+ELO),      RF,         0.1684
-C (Kernel, bw=50),   RF,         0.1638
-C (Kernel, bw=75),   RF,         0.1639
-C (Kernel, bw=100),  RF,         0.1653
-C (Kernel, bw=150),  RF,         0.1666
-C (Kernel, bw=200),  RF,         0.1672
+A (Per-bracket),     RF,         0.1666
+A (Per-bracket),     GBT,        0.1638
+A (Per-bracket),     LogReg,     0.1385
+B (Pooled+ELO),      RF,         0.1692
+C (Kernel, bw=50),   RF,         0.1667
+C (Kernel, bw=75),   RF,         0.1674
+C (Kernel, bw=100),  RF,         0.1684
+C (Kernel, bw=150),  RF,         0.1711
+C (Kernel, bw=200),  RF,         0.1730
 ```
 
 Random baseline (1 / mean legal moves ≈ 1/30) ≈ 0.033 → all RF/GBT
 architectures achieve ~5× random.
 
-- LogReg lags RF / GBT by ~15 %, confirming that `P(human_played | x)`
+- LogReg lags RF / GBT by ~17 %, confirming that `P(human_played | x)`
   has meaningful non-linear structure.
-- B marginally beats A (0.1684 vs 0.1638); C with a wider bandwidth
-  (200) reaches 0.1672, closing most of the gap and providing a smooth
-  function of `target_elo` which A does not.
+- B marginally beats A (0.1692 vs 0.1666); C with a wider bandwidth
+  (200) reaches 0.1730 — the single best configuration — while also
+  providing a smooth function of `target_elo` which A does not.
 
 ### 12.3 Hyperparameter sweep — [results/hyperparam_sweep.csv](results/hyperparam_sweep.csv)
 
@@ -851,22 +853,24 @@ values inside each family. Best configurations:
 
 | Family | Best setting | Mean reward |
 |---|---|---:|
-| TS | `v = 0.5` | 14.486 |
-| LinUCB | `α = 0.5` | 14.641 |
-| ε-Greedy | `ε = 0.1` | 14.931 |
+| TS | `v = 0.5` | 16.19 |
+| LinUCB | `α = 2.0` | 16.20 |
+| ε-Greedy | `ε = 0.05` | 16.55 |
 
-These are the settings used in the main experiment (§12.1).
+The main experiment (§12.1) uses TS `v=0.5`, LinUCB `α=1.0`, ε-Greedy
+`ε=0.1` — TS matches the sweep winner; the two others are within the
+stds of ~3.2–3.6, so the gap to the sweep optimum is noise.
 
 ### 12.4 Arch-C retune — [results/arch_c_retune.csv](results/arch_c_retune.csv)
 
-122 rows in total (3 grid configs × {A, C × 7 bandwidths} × 5 brackets).
+121 rows in total (1 header + 3 grid configs × {A, C × 7 bandwidths} × 5 brackets).
 The per-bracket Top-1 at `n_estimators=1000, max_depth=30` averages:
 
 | Arch | mean Top-1 |
 |---|---:|
-| A | 0.154 |
-| C (bw=100) | 0.157 |
-| C (bw=200) | 0.157 |
+| A | 0.163 |
+| C (bw=100) | 0.165 |
+| C (bw=200) | 0.166 |
 
 confirming that with more trees C ≥ A, consistent with the smaller-grid
 result in §12.2.

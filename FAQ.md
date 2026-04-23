@@ -40,17 +40,17 @@ rule out the simplest circular-reasoning failure modes.
 
 ---
 
-### 2. "The tutor raised student rating by ~490 points" is a big number. How seriously should I take it?
+### 2. "The tutor raised student rating by ~350 points" is a big number. How seriously should I take it?
 
 Take it as a **relative** comparison, not an absolute prediction of
 human learning. Specifically: across 1,000 simulated sessions, the
-learning-based tutors produced about 30 percent more simulated rating
-gain than a reasonable rule-based baseline did. That delta is the
-meaningful quantity. The absolute 490-point number depends on how
-the simulator maps mistake size to rating (an exponential-moving-
-average calibrated against empirical per-bracket means), and a different
-but equally defensible calibration would shift the absolute number
-without changing the ranking of policies.
+learning-based tutors produced roughly 2× the simulated rating gain of
+a reasonable rule-based baseline (best learner ~350 points vs rule-based
+~150 points). That delta is the meaningful quantity. The absolute
+number depends on how the simulator maps mistake size to rating (an
+exponential-moving-average calibrated against empirical per-bracket
+means), and a different but equally defensible calibration would shift
+the absolute number without changing the ranking of policies.
 
 ---
 
@@ -229,15 +229,14 @@ per-bracket classifiers.
 
 ### 13. How confident are you in the relative ranking of TS vs. LinUCB vs. ε-greedy?
 
-Moderately confident in the direction, less confident in the gap.
-Across 1,000 episodes, the mean cumulative reward gap between the
-top three learning policies is on the order of 0.5 (on a scale where
-the rule-based baseline is 1.5 below them), with standard deviations
-around 1.3. The three learning policies are clearly better than
-rule-based and random; distinguishing them from each other requires
-more episodes than we ran. The practical takeaway is "several
-standard bandit algorithms work roughly equally well here," not "TS
-is provably best."
+Direction yes; within-group ranking, no. Across 1,000 episodes, TS,
+LinUCB, and ε-Greedy sit within ~0.5 of each other on mean cumulative
+reward (43.2–43.7) with standard deviations around 5.2–5.9, so the
+three bandit policies are statistically indistinguishable from each
+other. All three are clearly better than Random (42.7) and Rule-Based
+(40.9), and their ELO-gain gap over Rule-Based is the more robust
+signal. The practical takeaway is "several standard bandit algorithms
+work roughly equally well here," not "TS is provably best."
 
 ---
 

@@ -1,10 +1,10 @@
 Architecture,Classifier,Top-1 Accuracy
-A (Per-bracket),RF,0.1638
-A (Per-bracket),GBT,0.1654
-A (Per-bracket),LogReg,0.1423
-B (Pooled+ELO),RF,0.1684
-"C (Kernel, bw=50)",RF,0.1638
-"C (Kernel, bw=75)",RF,0.1639
-"C (Kernel, bw=100)",RF,0.1653
-"C (Kernel, bw=150)",RF,0.1666
-"C (Kernel, bw=200)",RF,0.1672
+A (Per-bracket),RF,0.1666
+A (Per-bracket),GBT,0.1638
+A (Per-bracket),LogReg,0.1385
+B (Pooled+ELO),RF,0.1692
+"C (Kernel, bw=50)",RF,0.1667
+"C (Kernel, bw=75)",RF,0.1674
+"C (Kernel, bw=100)",RF,0.1684
+"C (Kernel, bw=150)",RF,0.1711
+"C (Kernel, bw=200)",RF,0.1730
