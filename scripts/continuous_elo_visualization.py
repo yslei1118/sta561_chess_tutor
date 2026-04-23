@@ -17,6 +17,8 @@ that fall between training brackets.
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+os.environ.setdefault("MPLCONFIGDIR", os.path.abspath("results/.matplotlib"))
+
 import pickle
 import numpy as np
 import pandas as pd
@@ -67,6 +69,8 @@ def architecture_c_prob_vs_elo(models, query_row, elos, bandwidth=100):
 
 
 def main():
+    os.makedirs("results", exist_ok=True)
+    os.makedirs("results/.matplotlib", exist_ok=True)
     os.makedirs("results/plots", exist_ok=True)
     models = load_models()
 

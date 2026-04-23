@@ -59,6 +59,7 @@ results = run_experiment(
     students, policies,
     n_episodes=N_EPISODES,
     n_interactions_per_episode=N_INTERACTIONS,
+    seed=42,
 )
 
 # Build summary table

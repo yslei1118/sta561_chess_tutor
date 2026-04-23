@@ -26,6 +26,8 @@ from chess_tutor.data.dataset import ChessTutorDataset
 from chess_tutor.data.extract_features import (
     extract_board_features, extract_move_features, extract_all_features,
 )
+from scripts.build_candidate_dataset import build_candidate_dataset
+from scripts.label_real_blunders import load_played_move_pairs
 
 
 MINIMAL_PGN = """[Event "Test"]
@@ -179,6 +181,59 @@ class TestDataset:
         assert "n_positions" in s and s["n_positions"] > 0
         assert "elo_range" in s
         assert "feature_dim" in s and s["feature_dim"] == 40
+
+
+class TestCandidateDatasetReproducibility:
+    def test_build_candidate_dataset_saves_source_row_idx(self, pgn_tmpfile, tmp_path):
+        parsed = parse_pgn_file(pgn_tmpfile)
+        parsed_path = tmp_path / "parsed_positions.parquet"
+        parsed.to_parquet(parsed_path)
+
+        arrays = build_candidate_dataset(
+            parsed_positions_path=str(parsed_path),
+            output_dir=str(tmp_path),
+        )
+
+        assert "candidate_source_row_idx.npy" in arrays
+        source_rows = arrays["candidate_source_row_idx.npy"]
+        y = arrays["candidate_y.npy"]
+        pos_idx = arrays["candidate_pos_idx.npy"]
+        assert len(source_rows) == len(y) == len(pos_idx)
+
+        for pos in np.unique(pos_idx):
+            mask = pos_idx == pos
+            assert len(np.unique(source_rows[mask])) == 1
+            assert y[mask].sum() == 1
+
+    def test_labeling_uses_source_row_idx_not_sampled_position_idx(self, tmp_path):
+        parsed = pd.DataFrame(
+            [
+                {"fen": chess.Board().fen(), "move_uci": "e2e4"},
+                {"fen": chess.Board().fen(), "move_uci": "d2d4"},
+                {"fen": chess.Board().fen(), "move_uci": "g1f3"},
+            ]
+        )
+        parsed_path = tmp_path / "parsed_positions.parquet"
+        parsed.to_parquet(parsed_path)
+
+        np.save(tmp_path / "candidate_y.npy", np.array([1, 0, 0, 1], dtype=np.int8))
+        np.save(tmp_path / "candidate_pos_idx.npy", np.array([0, 0, 1, 1], dtype=np.int32))
+        np.save(
+            tmp_path / "candidate_source_row_idx.npy",
+            np.array([2, 2, 0, 0], dtype=np.int32),
+        )
+
+        pairs = load_played_move_pairs(
+            parsed_positions_path=str(parsed_path),
+            candidate_y_path=str(tmp_path / "candidate_y.npy"),
+            candidate_source_row_path=str(tmp_path / "candidate_source_row_idx.npy"),
+            candidate_pos_idx_path=str(tmp_path / "candidate_pos_idx.npy"),
+        )
+
+        assert pairs == [
+            (parsed.iloc[2]["fen"], "g1f3"),
+            (parsed.iloc[0]["fen"], "e2e4"),
+        ]
 
 
 class TestExtractAllFeatures:

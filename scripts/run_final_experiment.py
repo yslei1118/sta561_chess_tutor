@@ -2,6 +2,9 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+os.environ.setdefault("MPLCONFIGDIR", os.path.abspath("results/.matplotlib"))
+os.makedirs("results/.matplotlib", exist_ok=True)
+
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -15,6 +18,9 @@ from chess_tutor.config import (
     KERNEL_BANDWIDTH_CANDIDATES,
 )
 
+SEED = 42
+
+os.makedirs('results', exist_ok=True)
 os.makedirs('results/plots', exist_ok=True)
 
 # ============================================================
@@ -40,7 +46,13 @@ policies = {
     'Rule-Based': RuleBasedPolicy(n_arms=N_FEEDBACK_TYPES),
 }
 
-results = run_experiment(students, policies, n_episodes=1000, n_interactions_per_episode=50)
+results = run_experiment(
+    students,
+    policies,
+    n_episodes=1000,
+    n_interactions_per_episode=50,
+    seed=SEED,
+)
 
 print(f"\n{'Policy':<25} {'Mean Reward':>12} {'Std':>8} {'ELO Gain':>10}")
 print('-' * 60)

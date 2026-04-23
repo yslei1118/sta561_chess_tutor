@@ -71,9 +71,8 @@ conda activate chess_tutor
 pip install -r requirements.txt
 ```
 
-Install Stockfish (only needed if you want to regenerate the cp_loss labels —
-the shipped Random Forest artifacts in `models/saved/` already do not require
-it at inference time):
+Install Stockfish if you want to regenerate the cp_loss labels used in the
+simulator:
 
 ```bash
 brew install stockfish        # macOS
@@ -87,15 +86,14 @@ Data files are not checked in (~330 MB). Reproduce them from the public
 Lichess January-2014 dump:
 
 ```bash
+mkdir -p data/raw data/processed models/saved results/plots
+
 # 1. Download + decompress the PGN (~550 MB decompressed, ~1 min on good network)
 python -c "from chess_tutor.data.download import download_lichess_pgn; \
            download_lichess_pgn(year=2014, month=1)"
 
 # 2. Parse → one row per sampled position (~15 min, single-threaded)
-python -c "from chess_tutor.data.parse_pgn import parse_pgn_file; \
-           df = parse_pgn_file('data/raw/lichess_2014_01.pgn', \
-                               max_games_per_bracket=100_000); \
-           df.to_parquet('data/processed/parsed_positions.parquet')"
+python scripts/parse_positions.py
 
 # 3. Build candidate-ranking arrays (~3 min)
 python scripts/build_candidate_dataset.py
@@ -107,8 +105,9 @@ python scripts/train_and_evaluate.py
 python scripts/label_real_blunders.py
 ```
 
-After the trained models land in `models/saved/` and the notebook,
-interactive CLI, and all `scripts/run_*.py` experiments become runnable.
+After the trained models land in `models/saved/`, the full experiment scripts
+become runnable. The bot still has heuristic fallbacks when trained models are
+absent, but the reported results use the trained artifacts above.
 
 ## How to run
 

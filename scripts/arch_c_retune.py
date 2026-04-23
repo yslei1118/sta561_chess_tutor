@@ -39,6 +39,7 @@ def evaluate_ranking(bracket_preds, y_test, pos_idx_test):
 
 
 def main():
+    os.makedirs("results", exist_ok=True)
     print("Loading data...")
     X = np.load("data/processed/candidate_X.npy")
     y = np.load("data/processed/candidate_y.npy")
